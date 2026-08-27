@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Guia Definitivo de Remoção de Manchas</title>
+<meta name="description" content="Digite o tipo de sujeira e descubra na hora qual produto profissional usar para remover a mancha." />
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        fontFamily: {
+          sans: ['ui-sans-serif', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', 'sans-serif'],
+        },
+      },
+    },
+  };
+</script>
+<style>
+  /* Suaviza o aparecimento dos resultados */
+  .fade-in { animation: fadeIn .18s ease-out both; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+  /* Remove o "x" nativo do input de busca */
+  input[type="search"]::-webkit-search-cancel-button { -webkit-appearance: none; }
+</style>
+</head>
+<body class="min-h-screen bg-white text-slate-800 antialiased flex flex-col">
+
+  <main class="flex-1 w-full max-w-2xl mx-auto px-4 sm:px-6 flex flex-col">
+
+    <!-- ================= HERO / BUSCA ================= -->
+    <section id="hero" class="pt-14 sm:pt-24 pb-6 transition-all duration-300">
+      <div class="text-center mb-8">
+        <div class="inline-flex items-center gap-2 text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-full px-3 py-1 mb-5">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+          Guia de utilidade pública
+        </div>
+        <h1 class="text-3xl sm:text-4xl font-semibold tracking-tight text-slate-900">
+          O que você precisa limpar hoje?
+        </h1>
+        <p class="mt-3 text-slate-500 text-sm sm:text-base">
+          Digite o tipo de sujeira ou mancha. Nós dizemos o produto certo, como usar e onde comprar.
+        </p>
+      </div>
+
+      <!-- Barra de busca -->
+      <div class="relative">
+        <div class="flex items-center gap-3 rounded-full border border-slate-200 bg-white shadow-lg shadow-slate-200/60 focus-within:shadow-xl focus-within:border-slate-300 transition px-5 py-3.5">
+          <svg class="w-5 h-5 text-slate-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z" />
+          </svg>
+          <input
+            id="search"
+            type="search"
+            autocomplete="off"
+            autocapitalize="off"
+            spellcheck="false"
+            placeholder="Ex.: café, ferrugem, sangue, urina, tinta..."
+            class="w-full bg-transparent outline-none text-base placeholder:text-slate-400"
+          />
+          <button id="clearBtn" type="button" aria-label="Limpar busca"
+            class="hidden shrink-0 text-slate-400 hover:text-slate-600 transition">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <!-- Autocomplete -->
+        <div id="autocomplete"
+          class="hidden absolute z-20 left-0 right-0 mt-2 bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden fade-in">
+        </div>
+      </div>
+
+      <!-- Sugestões rápidas -->
+      <div id="chips" class="mt-5 flex flex-wrap justify-center gap-2"></div>
+    </section>
+
+    <!-- ================= RESULTADO ================= -->
+    <section id="results" class="pb-16"></section>
+
+    <!-- ================= ESTADO VAZIO / SEM RESULTADO ================= -->
+    <section id="emptyState" class="hidden pb-16 text-center">
+      <div class="mx-auto w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center mb-4">
+        <svg class="w-7 h-7 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.7">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      </div>
+      <p class="text-slate-600 font-medium">Não encontramos essa mancha no guia.</p>
+      <p class="text-slate-400 text-sm mt-1">Tente outro termo — por exemplo "gordura", "óleo", "mofo" ou "graxa".</p>
+    </section>
+
+  </main>
+
+  <footer class="border-t border-slate-100 py-6 text-center text-xs text-slate-400">
+    Guia Definitivo de Remoção de Manchas · Recomendações técnicas da linha profissional Spartan
+  </footer>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ============================================================
+     BASE DE DADOS
+     ============================================================ */
+
+  // Legenda de produtos (código -> nome por extenso)
+  var PRODUCTS = {
+    A: "SSE CARPET PRESPRAY & SPOTTER",
+    B: "SOLVFRESH",
+    C: "ORANGE TOUGH 90",
+    D: "PEROXY FLOT",
+    E: "CONTEMPO ODOR SOLUTION",
+    F: "RUSTFRESH",
+    G: "ENZIFRESH",
+    H: "CHEWING GUM REMOVER",
+    I: "XTRACTION II",
+    J: "ALVFRESH"
+  };
+
+  // Mapeamento de manchas (problema -> produtos recomendados)
+  var STAINS = [
+    { nome: "Café", produtos: ["A", "D"] },
+    { nome: "Chocolate e Lácteos / Doces", produtos: ["A", "D"] },
+    { nome: "Cosméticos (Batom, Rímel e Base)", produtos: ["B", "C"] },
+    { nome: "Gordura Animal (Cozinha)", produtos: ["D"] },
+    { nome: "Mofo", produtos: ["A", "B"] },
+    { nome: "Vinho e Bebidas Alcoólicas", produtos: ["D"] },
+    { nome: "Óleo Vegetal (Cozinha)", produtos: ["A", "B"] },
+    { nome: "Goma de Mascar e Slime", produtos: ["B", "C", "H"] },
+    { nome: "Graxa de Sapato", produtos: ["B", "C"] },
+    { nome: "Resíduos de lodo", produtos: ["D"] },
+    { nome: "Desodorante", produtos: ["B", "C"] },
+    { nome: "Sangue Seco", produtos: ["D", "G"] },
+    { nome: "Medicamentos", produtos: ["B", "D"] },
+    { nome: "Sucos de Frutas e Refrigerantes", produtos: ["A", "D"] },
+    { nome: "Urina e Fezes", produtos: ["E", "G"] },
+    { nome: "Óleos e Graxas de Motor", produtos: ["B", "C"] },
+    { nome: "Tintas e Vernizes", produtos: ["B", "C"] },
+    { nome: "Protetor Solar e Óleos Corporais", produtos: ["B", "C"] },
+    { nome: "Cimento e Gesso", produtos: ["F"] },
+    { nome: "Ferrugem e Óxidos", produtos: ["F"] },
+    { nome: "Terra", produtos: ["F", "D"] }
+  ];
+
+  // Palavras-chave extras para tornar a busca mais "inteligente"
+  var ALIASES = {
+    "Café": ["cafe", "cafezinho", "borra de cafe"],
+    "Chocolate e Lácteos / Doces": ["chocolate", "leite", "lacteo", "laticinio", "doce", "sorvete", "achocolatado", "brigadeiro"],
+    "Cosméticos (Batom, Rímel e Base)": ["cosmetico", "maquiagem", "batom", "rimel", "mascara de cilios", "base", "corretivo", "make"],
+    "Gordura Animal (Cozinha)": ["gordura", "banha", "sebo", "gordura de carne", "gordura animal"],
+    "Mofo": ["mofo", "bolor", "umidade", "fungo", "cheiro de mofo"],
+    "Vinho e Bebidas Alcoólicas": ["vinho", "cerveja", "bebida", "alcool", "drink", "champagne", "espumante"],
+    "Óleo Vegetal (Cozinha)": ["oleo", "oleo de soja", "oleo de cozinha", "azeite", "oleo vegetal", "fritura"],
+    "Goma de Mascar e Slime": ["chiclete", "goma de mascar", "slime", "amoeba", "gluten de goma"],
+    "Graxa de Sapato": ["graxa de sapato", "engraxate", "betume", "pomada de sapato"],
+    "Resíduos de lodo": ["lodo", "limo", "barro", "residuo de lodo", "lama organica"],
+    "Desodorante": ["desodorante", "antitranspirante", "mancha de suor", "amarelado de suor"],
+    "Sangue Seco": ["sangue", "sangue seco", "hemorragia", "mancha de sangue"],
+    "Medicamentos": ["remedio", "medicamento", "xarope", "merthiolate", "iodo", "pomada"],
+    "Sucos de Frutas e Refrigerantes": ["suco", "refrigerante", "refri", "coca", "guarana", "fruta", "polpa"],
+    "Urina e Fezes": ["urina", "xixi", "fezes", "coco", "pet", "animal", "cachorro", "gato", "cocô", "necessidades"],
+    "Óleos e Graxas de Motor": ["oleo de motor", "graxa de motor", "graxa", "lubrificante", "oleo automotivo", "oleo de carro"],
+    "Tintas e Vernizes": ["tinta", "verniz", "esmalte", "tinta acrilica", "tinta latex", "pintura"],
+    "Protetor Solar e Óleos Corporais": ["protetor solar", "bronzeador", "oleo corporal", "hidratante", "creme corporal", "filtro solar"],
+    "Cimento e Gesso": ["cimento", "gesso", "argamassa", "reboco", "concreto", "massa corrida"],
+    "Ferrugem e Óxidos": ["ferrugem", "oxido", "oxidacao", "mancha de ferro", "corrosao"],
+    "Terra": ["terra", "poeira", "barro seco", "sujeira de chao", "lama"]
+  };
+
+  var WARNING = "Atente-se ao tipo de tecido e a diluição do produto. Consulte o rótulo antes de aplicar.";
+
+  var HOW_TO = [
+    "Remova o excesso da sujeira com uma espátula ou papel absorvente, sem esfregar.",
+    "Aplique o produto recomendado sobre a mancha, do exterior para o centro.",
+    "Deixe agir alguns minutos e retire com pano limpo úmido ou extração.",
+    "Repita a aplicação se necessário e seque bem a área."
+  ];
+
+  /* ============================================================
+     UTILIDADES
+     ============================================================ */
+
+  function normalize(str) {
+    return (str || "")
+      .toString()
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[̀-ͯ]/g, "")
+      .trim();
+  }
+
+  // Gera o slug do produto para a URL do Mercado Livre
+  function mlSlug(productName) {
+    return normalize(productName)
+      .replace(/&/g, " ")
+      .replace(/[^a-z0-9\s-]/g, "")
+      .replace(/\s+/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "");
+  }
+
+  function mercadoLivreUrl(productName) {
+    return "https://lista.mercadolivre.com.br/" + mlSlug(productName);
+  }
+
+  // Índice de busca pré-calculado
+  var INDEX = STAINS.map(function (s) {
+    var terms = [normalize(s.nome)].concat((ALIASES[s.nome] || []).map(normalize));
+    return { stain: s, haystack: terms.join(" | ") };
+  });
+
+  function search(query) {
+    var q = normalize(query);
+    if (!q) return [];
+    return INDEX
+      .filter(function (item) { return item.haystack.indexOf(q) !== -1; })
+      .map(function (item) { return item.stain; });
+  }
+
+  /* ============================================================
+     RENDERIZAÇÃO
+     ============================================================ */
+
+  var $search = document.getElementById("search");
+  var $clearBtn = document.getElementById("clearBtn");
+  var $autocomplete = document.getElementById("autocomplete");
+  var $results = document.getElementById("results");
+  var $emptyState = document.getElementById("emptyState");
+  var $hero = document.getElementById("hero");
+  var $chips = document.getElementById("chips");
+
+  var selectedStain = null;
+
+  function productNames(codes) {
+    return codes.map(function (c) { return PRODUCTS[c]; });
+  }
+
+  function escapeHtml(str) {
+    return String(str).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
+  function renderAutocomplete(matches) {
+    if (!matches.length) {
+      $autocomplete.classList.add("hidden");
+      $autocomplete.innerHTML = "";
+      return;
+    }
+    $autocomplete.innerHTML = matches.slice(0, 8).map(function (s) {
+      var count = s.produtos.length;
+      return (
+        '<button type="button" data-stain="' + escapeHtml(s.nome) + '" ' +
+        'class="w-full text-left px-4 py-3 flex items-center gap-3 hover:bg-slate-50 transition border-b border-slate-100 last:border-0">' +
+          '<svg class="w-4 h-4 text-slate-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">' +
+            '<path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z" /></svg>' +
+          '<span class="flex-1 text-sm text-slate-700">' + escapeHtml(s.nome) + '</span>' +
+          '<span class="text-xs text-slate-400 shrink-0">' + count + (count > 1 ? " produtos" : " produto") + '</span>' +
+        '</button>'
+      );
+    }).join("");
+    $autocomplete.classList.remove("hidden");
+  }
+
+  function renderResultCard(stain) {
+    var names = productNames(stain.produtos);
+
+    var productsHtml = stain.produtos.map(function (code) {
+      var name = PRODUCTS[code];
+      return (
+        '<li class="flex items-start gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3">' +
+          '<span class="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-slate-900 text-white text-xs font-bold">' + code + '</span>' +
+          '<div>' +
+            '<p class="font-semibold text-slate-900 leading-tight">' + escapeHtml(name) + '</p>' +
+            '<p class="text-xs text-slate-400 mt-0.5">Produto profissional indicado</p>' +
+          '</div>' +
+        '</li>'
+      );
+    }).join("");
+
+    var howToHtml = HOW_TO.map(function (step, i) {
+      return (
+        '<li class="flex gap-3">' +
+          '<span class="shrink-0 text-slate-300 font-semibold tabular-nums">' + (i + 1) + '</span>' +
+          '<span>' + escapeHtml(step) + '</span>' +
+        '</li>'
+      );
+    }).join("");
+
+    // Botão mágico: link dinâmico para o Mercado Livre (usa o 1º produto recomendado)
+    var mainProduct = names[0];
+    var buyUrl = mercadoLivreUrl(mainProduct);
+
+    var extraBuyLinks = names.length > 1
+      ? '<div class="mt-3 flex flex-wrap gap-2">' +
+          names.map(function (n) {
+            return '<a href="' + mercadoLivreUrl(n) + '" target="_blank" rel="noopener noreferrer" ' +
+              'class="text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-100 rounded-full px-3 py-1.5 transition">' +
+              'Preço de ' + escapeHtml(n) + '</a>';
+          }).join("") +
+        '</div>'
+      : '';
+
+    $results.innerHTML = (
+      '<article class="fade-in rounded-3xl border border-slate-200 bg-white shadow-xl shadow-slate-200/50 overflow-hidden">' +
+
+        '<div class="bg-slate-900 px-6 py-5 text-white">' +
+          '<p class="text-xs uppercase tracking-wider text-slate-400">Solução recomendada para</p>' +
+          '<h2 class="text-xl sm:text-2xl font-semibold mt-1">' + escapeHtml(stain.nome) + '</h2>' +
+        '</div>' +
+
+        '<div class="p-6 space-y-6">' +
+
+          '<div>' +
+            '<h3 class="text-sm font-semibold text-slate-900 mb-3">Produto(s) indicado(s)</h3>' +
+            '<ul class="space-y-2">' + productsHtml + '</ul>' +
+          '</div>' +
+
+          '<div>' +
+            '<h3 class="text-sm font-semibold text-slate-900 mb-3">Como aplicar</h3>' +
+            '<ol class="space-y-2 text-sm text-slate-600">' + howToHtml + '</ol>' +
+          '</div>' +
+
+          '<div class="flex gap-3 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">' +
+            '<svg class="w-5 h-5 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">' +
+              '<path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m0 3.75h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" /></svg>' +
+            '<p>' + escapeHtml(WARNING) + '</p>' +
+          '</div>' +
+
+          '<div>' +
+            '<a href="' + buyUrl + '" target="_blank" rel="noopener noreferrer" ' +
+              'class="group flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 active:bg-emerald-700 px-6 py-4 text-white font-semibold text-base shadow-lg shadow-emerald-500/30 transition">' +
+              '<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">' +
+                '<path stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>' +
+              'Buscar Melhor Preço' +
+            '</a>' +
+            extraBuyLinks +
+            '<p class="text-center text-xs text-slate-400 mt-2">Você será levado à busca do Mercado Livre pelo produto indicado.</p>' +
+          '</div>' +
+
+        '</div>' +
+      '</article>'
+    );
+    $results.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
+
+  function renderMultiResults(matches) {
+    $results.innerHTML = (
+      '<p class="text-sm text-slate-500 mb-3 fade-in">' + matches.length + ' resultados encontrados. Toque para ver a solução:</p>' +
+      '<div class="space-y-2 fade-in">' +
+        matches.map(function (s) {
+          return (
+            '<button type="button" data-stain="' + escapeHtml(s.nome) + '" ' +
+              'class="w-full text-left rounded-2xl border border-slate-200 bg-white px-5 py-4 hover:border-slate-300 hover:shadow-md transition flex items-center justify-between gap-3">' +
+              '<span class="font-medium text-slate-800">' + escapeHtml(s.nome) + '</span>' +
+              '<span class="text-slate-300">&rarr;</span>' +
+            '</button>'
+          );
+        }).join("") +
+      '</div>'
+    );
+  }
+
+  function setCompactMode(on) {
+    if (on) {
+      $hero.classList.remove("pt-14", "sm:pt-24");
+      $hero.classList.add("pt-8", "sm:pt-12");
+    } else {
+      $hero.classList.add("pt-14", "sm:pt-24");
+      $hero.classList.remove("pt-8", "sm:pt-12");
+    }
+  }
+
+  function clearResults() {
+    $results.innerHTML = "";
+    $emptyState.classList.add("hidden");
+  }
+
+  /* ============================================================
+     EVENTOS
+     ============================================================ */
+
+  function handleInput() {
+    var q = $search.value;
+    $clearBtn.classList.toggle("hidden", !q);
+
+    if (!q.trim()) {
+      $autocomplete.classList.add("hidden");
+      clearResults();
+      setCompactMode(false);
+      return;
+    }
+
+    var matches = search(q);
+    renderAutocomplete(matches);
+
+    // Cards de resultado imediatos abaixo da busca
+    if (matches.length === 0) {
+      clearResults();
+      $emptyState.classList.remove("hidden");
+      setCompactMode(true);
+    } else if (matches.length === 1) {
+      $emptyState.classList.add("hidden");
+      renderResultCard(matches[0]);
+      setCompactMode(true);
+    } else {
+      $emptyState.classList.add("hidden");
+      renderMultiResults(matches);
+      setCompactMode(true);
+    }
+  }
+
+  function selectStainByName(nome) {
+    var stain = STAINS.filter(function (s) { return s.nome === nome; })[0];
+    if (!stain) return;
+    selectedStain = stain;
+    $search.value = stain.nome;
+    $clearBtn.classList.remove("hidden");
+    $autocomplete.classList.add("hidden");
+    $emptyState.classList.add("hidden");
+    setCompactMode(true);
+    renderResultCard(stain);
+  }
+
+  $search.addEventListener("input", handleInput);
+  $search.addEventListener("focus", function () {
+    if ($search.value.trim()) handleInput();
+  });
+
+  // Delegação: cliques no autocomplete e nos cards de múltiplos resultados
+  document.addEventListener("click", function (e) {
+    var btn = e.target.closest("[data-stain]");
+    if (btn) {
+      selectStainByName(btn.getAttribute("data-stain"));
+      return;
+    }
+    // Fecha autocomplete ao clicar fora
+    if (!e.target.closest("#autocomplete") && !e.target.closest("#search")) {
+      $autocomplete.classList.add("hidden");
+    }
+  });
+
+  $search.addEventListener("keydown", function (e) {
+    if (e.key === "Enter") {
+      var matches = search($search.value);
+      if (matches.length >= 1) {
+        selectStainByName(matches[0].nome);
+      }
+      $autocomplete.classList.add("hidden");
+    }
+    if (e.key === "Escape") {
+      $autocomplete.classList.add("hidden");
+    }
+  });
+
+  $clearBtn.addEventListener("click", function () {
+    $search.value = "";
+    $clearBtn.classList.add("hidden");
+    $autocomplete.classList.add("hidden");
+    clearResults();
+    setCompactMode(false);
+    $search.focus();
+  });
+
+  /* ============================================================
+     CHIPS DE SUGESTÃO RÁPIDA
+     ============================================================ */
+
+  var QUICK = ["Café", "Ferrugem e Óxidos", "Urina e Fezes", "Sangue Seco", "Mofo", "Tintas e Vernizes", "Goma de Mascar e Slime"];
+  $chips.innerHTML = QUICK.map(function (nome) {
+    var label = nome.split(" e ")[0].split(" (")[0];
+    return '<button type="button" data-stain="' + escapeHtml(nome) + '" ' +
+      'class="text-sm text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-full px-4 py-1.5 transition">' +
+      escapeHtml(label) + '</button>';
+  }).join("");
+
+})();
+</script>
+</body>
+</html>
