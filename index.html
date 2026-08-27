@@ -87,8 +87,8 @@
           <path stroke-linecap="round" stroke-linejoin="round" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
       </div>
-      <p class="text-slate-600 font-medium">Não encontramos essa mancha no guia.</p>
-      <p class="text-slate-400 text-sm mt-1">Tente outro termo — por exemplo "gordura", "óleo", "mofo" ou "graxa".</p>
+      <p class="text-slate-600 font-medium">Não conseguimos identificar essa mancha.</p>
+      <p class="text-slate-400 text-sm mt-1">Descreva o material da sujeira — por exemplo "gordura", "tinta", "sangue", "ferrugem" ou "barro".</p>
     </section>
 
   </main>
@@ -179,6 +179,110 @@
   ];
 
   /* ============================================================
+     CAMADA INTELIGENTE (fallback)
+     Quando a mancha exata não está no guia, classificamos o
+     problema por "família química" e sugerimos o produto Spartan
+     mais adequado + primeiros socorros caseiros.
+     ============================================================ */
+
+  var CATEGORIES = {
+    tanino_pigmento: {
+      rotulo: "Manchas de tanino e pigmento",
+      exemplos: "café, vinho, sucos, refrigerante, molho de tomate, ketchup, chá",
+      produtos: ["A", "D"],
+      caseiro: [
+        "Aja rápido: quanto mais fresca a mancha, maior a chance de sair por completo.",
+        "Nunca use água quente — o calor fixa o pigmento no tecido.",
+        "Enxágue pelo avesso com água fria corrente para empurrar a sujeira para fora.",
+        "Aplique sabão neutro ou detergente de louça e esfregue em movimentos circulares leves.",
+        "Em tecido branco resistente, água oxigenada 10 volumes ajuda a clarear o resíduo."
+      ],
+      palavras: ["molho", "tomate", "ketchup", "catchup", "sugo", "extrato", "bolonhesa", "chá", "cha", "mate", "cafe", "café", "vinho", "suco", "refrigerante", "refri", "coca", "guarana", "chocolate", "achocolatado", "groselha", "acai", "açaí", "beterraba", "curry", "colorau", "urucum", "pigmento", "tanino", "corante", "guache", "tinta guache", "gelatina colorida", "picole", "picolé"]
+    },
+    gordura_oleo: {
+      rotulo: "Manchas de gordura e óleo",
+      exemplos: "óleo de cozinha, manteiga, maionese, azeite, creme, óleo de motor",
+      produtos: ["B", "C", "D"],
+      caseiro: [
+        "Cubra a mancha com talco, amido de milho ou bicarbonato e espere 15 min para absorver o óleo.",
+        "Escove o pó e aplique detergente de louça (desengordurante) puro sobre a mancha.",
+        "Use água morna (não fervente) para ajudar a dissolver a gordura.",
+        "Deixe o detergente agir de 10 a 15 min antes de enxaguar.",
+        "Só leve à secadora depois de confirmar que a mancha saiu — o calor fixa a gordura."
+      ],
+      palavras: ["gordura", "oleo", "óleo", "oleo de cozinha", "oleo vegetal", "gordura animal", "azeite", "manteiga", "margarina", "maionese", "banha", "sebo", "fritura", "frito", "creme", "hidratante", "locao", "loção", "pomada", "vaselina", "wd40", "wd-40", "silicone", "graxa", "lubrificante", "batata frita", "queijo", "molho branco", "requeijao", "bacon", "linguica", "coxinha", "pastel", "protetor solar", "bronzeador", "filtro solar", "cera", "vela", "parafina", "crayon", "giz de cera"]
+    },
+    proteina: {
+      rotulo: "Manchas de origem proteica / orgânica",
+      exemplos: "sangue, ovo, leite, suor, urina, fezes, vômito, grama",
+      produtos: ["G", "D", "E"],
+      caseiro: [
+        "Use SOMENTE água fria — água quente cozinha a proteína e sela a mancha para sempre.",
+        "Molhe pelo avesso e pressione com pano limpo, sem esfregar com força.",
+        "Produtos enzimáticos (mesma base de sabão para roupa de bebê) quebram a proteína.",
+        "Deixe de molho em água fria com sabão neutro por 30 min antes de lavar.",
+        "Se houver odor, um pouco de vinagre branco diluído no enxágue ajuda a neutralizar."
+      ],
+      palavras: ["sangue", "sangue seco", "ovo", "clara", "gema", "leite", "lacteo", "lácteo", "laticinio", "iogurte", "sorvete", "suor", "axila", "urina", "xixi", "fezes", "coco", "cocô", "pet", "cachorro", "gato", "vomito", "vômito", "catarro", "muco", "grama", "capim", "clorofila", "verde de mato", "secrecao", "proteina", "proteína", "gelatina", "queijo derretido"]
+    },
+    ferrugem_mineral: {
+      rotulo: "Manchas minerais (ferrugem, cimento, cal)",
+      exemplos: "ferrugem, óxido, cimento, cal, gesso, água dura",
+      produtos: ["F"],
+      caseiro: [
+        "NUNCA use água sanitária/cloro — reage com o ferro e fixa a mancha de vez.",
+        "Manchas leves de ferrugem: suco de limão + sal, ao sol, por 30 min, depois enxágue.",
+        "Resíduo de cimento/cal seco: raspe o excesso a seco antes de qualquer produto líquido.",
+        "Use sempre um removedor à base de ácido próprio para o material e enxágue muito bem.",
+        "Faça teste em área escondida — ácidos podem desbotar tecidos e atacar metais."
+      ],
+      palavras: ["ferrugem", "oxido", "óxido", "oxidacao", "ferro", "cimento", "cal", "gesso", "argamassa", "reboco", "concreto", "calcario", "calcário", "agua dura", "água dura", "tártaro", "tartaro", "encardido de metal", "mancha amarela de cano"]
+    },
+    adesivo_polimero: {
+      rotulo: "Manchas de adesivo, tinta e polímero",
+      exemplos: "cola, chiclete, slime, tinta, verniz, esmalte, adesivo, piche",
+      produtos: ["B", "C", "H"],
+      caseiro: [
+        "Chiclete e slime: coloque gelo num saco plástico sobre a mancha para endurecer e depois destaque.",
+        "Cola e etiqueta: um pano com álcool isopropílico ou removedor amolece o adesivo.",
+        "Tinta fresca à base d'água: lave imediatamente com água fria e sabão.",
+        "Tinta a óleo/esmalte: use solvente adequado (aguarrás, removedor) sempre pelo avesso.",
+        "Não aplique calor — ele derrete o polímero e espalha a mancha."
+      ],
+      palavras: ["cola", "adesivo", "etiqueta", "fita", "durex", "chiclete", "goma de mascar", "slime", "amoeba", "tinta", "verniz", "esmalte", "tinta de caneta", "caneta", "hidrocor", "canetinha", "piche", "asfalto", "breu", "resina", "epoxi", "epóxi", "silicone de vedacao"]
+    },
+    cosmetico: {
+      rotulo: "Manchas de cosméticos",
+      exemplos: "batom, base, rímel, corretivo, autobronzeador, tinta de cabelo",
+      produtos: ["B", "C"],
+      caseiro: [
+        "Não esfregue: pressione com algodão para tirar o excesso do produto.",
+        "Água micelar ou demaquilante no algodão dissolve boa parte da maquiagem.",
+        "Depois, aplique detergente de louça sobre a mancha e deixe agir 10 min.",
+        "Autobronzeador e henna: esfoliação suave + suco de limão diluído ajudam a clarear.",
+        "Enxágue com água fria e repita antes de lavar normalmente."
+      ],
+      palavras: ["batom", "base", "rimel", "rímel", "mascara de cilios", "corretivo", "maquiagem", "make", "pó compacto", "blush", "sombra", "delineador", "gloss", "autobronzeador", "bronzeador", "henna", "tinta de cabelo", "coloracao capilar"]
+    },
+    terra_barro: {
+      rotulo: "Manchas de terra, barro e poeira",
+      exemplos: "terra, barro, lama, argila, lodo, poeira",
+      produtos: ["F", "D"],
+      caseiro: [
+        "Deixe a lama secar completamente — barro úmido espalha, barro seco solta.",
+        "Escove ou bata o tecido ao ar livre para tirar o máximo de partículas.",
+        "Faça uma pré-lavagem esfregando sabão de coco ou detergente na área.",
+        "Deixe de molho em água morna com sabão por 30 min antes da máquina.",
+        "Manchas de barro vermelho (terra argilosa) podem precisar de removedor de ferrugem."
+      ],
+      palavras: ["terra", "barro", "lama", "argila", "poeira", "po de chao", "lodo", "limo", "chao molhado", "quintal", "jardim", "horta", "trilha"]
+    }
+  };
+
+  // Ordem de prioridade em caso de empate na pontuação
+  var CATEGORY_ORDER = ["ferrugem_mineral", "adesivo_polimero", "proteina", "cosmetico", "gordura_oleo", "tanino_pigmento", "terra_barro"];
+
+  /* ============================================================
      UTILIDADES
      ============================================================ */
 
@@ -222,6 +326,40 @@
     return INDEX
       .filter(function (item) { return item.haystack.indexOf(q) !== -1; })
       .map(function (item) { return item.stain; });
+  }
+
+  // Índice de palavras-chave das categorias (normalizado)
+  var CATEGORY_INDEX = Object.keys(CATEGORIES).map(function (key) {
+    return { key: key, palavras: CATEGORIES[key].palavras.map(normalize) };
+  });
+
+  // "Inteligência" offline: classifica um termo desconhecido na família
+  // química mais provável e devolve a categoria correspondente.
+  function inferCategory(query) {
+    var q = normalize(query);
+    if (q.length < 3) return null;
+    var tokens = q.split(/[^a-z0-9]+/).filter(function (t) { return t.length >= 3; });
+
+    var best = null, bestScore = 0;
+    CATEGORY_INDEX.forEach(function (cat) {
+      var score = 0;
+      cat.palavras.forEach(function (p) {
+        if (!p) return;
+        // frase inteira contida na busca (peso alto)
+        if (q.indexOf(p) !== -1) { score += p.indexOf(" ") !== -1 ? 3 : 2; return; }
+        // token isolado que casa parcialmente com a palavra-chave
+        tokens.forEach(function (t) {
+          if (p === t) score += 2;
+          else if (p.length >= 4 && t.length >= 4 && (p.indexOf(t) !== -1 || t.indexOf(p) !== -1)) score += 1;
+        });
+      });
+      var rank = CATEGORY_ORDER.indexOf(cat.key);
+      if (score > bestScore || (score === bestScore && best && rank < CATEGORY_ORDER.indexOf(best))) {
+        if (score > 0) { best = cat.key; bestScore = score; }
+      }
+    });
+
+    return best ? { key: best, data: CATEGORIES[best], score: bestScore } : null;
   }
 
   /* ============================================================
@@ -269,23 +407,26 @@
     $autocomplete.classList.remove("hidden");
   }
 
-  function renderResultCard(stain) {
-    var names = productNames(stain.produtos);
+  var cartIcon =
+    '<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">' +
+      '<path stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>';
 
-    var productsHtml = stain.produtos.map(function (code) {
-      var name = PRODUCTS[code];
+  function productsListHtml(codes) {
+    return codes.map(function (code) {
       return (
         '<li class="flex items-start gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3">' +
           '<span class="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-slate-900 text-white text-xs font-bold">' + code + '</span>' +
           '<div>' +
-            '<p class="font-semibold text-slate-900 leading-tight">' + escapeHtml(name) + '</p>' +
+            '<p class="font-semibold text-slate-900 leading-tight">' + escapeHtml(PRODUCTS[code]) + '</p>' +
             '<p class="text-xs text-slate-400 mt-0.5">Produto profissional indicado</p>' +
           '</div>' +
         '</li>'
       );
     }).join("");
+  }
 
-    var howToHtml = HOW_TO.map(function (step, i) {
+  function stepsListHtml(steps) {
+    return steps.map(function (step, i) {
       return (
         '<li class="flex gap-3">' +
           '<span class="shrink-0 text-slate-300 font-semibold tabular-nums">' + (i + 1) + '</span>' +
@@ -293,17 +434,23 @@
         '</li>'
       );
     }).join("");
+  }
 
-    // Botões mágicos: links dinâmicos (usam o 1º produto recomendado como principal)
+  function warningHtml() {
+    return (
+      '<div class="flex gap-3 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">' +
+        '<svg class="w-5 h-5 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">' +
+          '<path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m0 3.75h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" /></svg>' +
+        '<p>' + escapeHtml(WARNING) + '</p>' +
+      '</div>'
+    );
+  }
+
+  // Bloco de botões de compra (Google Shopping + Mercado Livre)
+  function buyBlockHtml(codes) {
+    var names = productNames(codes);
     var mainProduct = names[0];
-    var googleUrl = googleShoppingUrl(mainProduct);
-    var mlUrl = mercadoLivreUrl(mainProduct);
 
-    var cartIcon =
-      '<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">' +
-        '<path stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>';
-
-    // Se houver mais de um produto, oferece os dois links para cada um
     var extraBuyLinks = names.length > 1
       ? '<div class="mt-4 border-t border-slate-100 pt-4">' +
           '<p class="text-xs font-semibold text-slate-500 mb-2">Comparar preço dos outros produtos indicados</p>' +
@@ -321,6 +468,25 @@
         '</div>'
       : '';
 
+    return (
+      '<div>' +
+        '<div class="grid gap-3 sm:grid-cols-2">' +
+          '<a href="' + googleShoppingUrl(mainProduct) + '" target="_blank" rel="noopener noreferrer" ' +
+            'class="flex items-center justify-center gap-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 active:bg-emerald-700 px-5 py-4 text-white font-semibold text-base shadow-lg shadow-emerald-500/30 transition">' +
+            cartIcon + 'Buscar Melhor Preço' +
+          '</a>' +
+          '<a href="' + mercadoLivreUrl(mainProduct) + '" target="_blank" rel="noopener noreferrer" ' +
+            'class="flex items-center justify-center gap-2 rounded-xl bg-yellow-400 hover:bg-yellow-500 active:bg-yellow-600 px-5 py-4 text-slate-900 font-semibold text-base shadow-lg shadow-yellow-400/30 transition">' +
+            cartIcon + 'Ver no Mercado Livre' +
+          '</a>' +
+        '</div>' +
+        extraBuyLinks +
+        '<p class="text-center text-xs text-slate-400 mt-3">"Buscar Melhor Preço" compara ofertas no Google Shopping. O outro botão leva direto ao Mercado Livre.</p>' +
+      '</div>'
+    );
+  }
+
+  function renderResultCard(stain) {
     $results.innerHTML = (
       '<article class="fade-in rounded-3xl border border-slate-200 bg-white shadow-xl shadow-slate-200/50 overflow-hidden">' +
 
@@ -333,34 +499,60 @@
 
           '<div>' +
             '<h3 class="text-sm font-semibold text-slate-900 mb-3">Produto(s) indicado(s)</h3>' +
-            '<ul class="space-y-2">' + productsHtml + '</ul>' +
+            '<ul class="space-y-2">' + productsListHtml(stain.produtos) + '</ul>' +
           '</div>' +
 
           '<div>' +
             '<h3 class="text-sm font-semibold text-slate-900 mb-3">Como aplicar</h3>' +
-            '<ol class="space-y-2 text-sm text-slate-600">' + howToHtml + '</ol>' +
+            '<ol class="space-y-2 text-sm text-slate-600">' + stepsListHtml(HOW_TO) + '</ol>' +
           '</div>' +
 
-          '<div class="flex gap-3 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">' +
-            '<svg class="w-5 h-5 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">' +
-              '<path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m0 3.75h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" /></svg>' +
-            '<p>' + escapeHtml(WARNING) + '</p>' +
+          warningHtml() +
+          buyBlockHtml(stain.produtos) +
+
+        '</div>' +
+      '</article>'
+    );
+    $results.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
+
+  // Card de "recomendação inteligente" para manchas fora do guia
+  function renderInferredCard(query, result) {
+    var data = result.data;
+    var termo = query.trim().charAt(0).toUpperCase() + query.trim().slice(1);
+
+    $results.innerHTML = (
+      '<article class="fade-in rounded-3xl border border-indigo-200 bg-white shadow-xl shadow-indigo-200/40 overflow-hidden">' +
+
+        '<div class="bg-indigo-600 px-6 py-5 text-white">' +
+          '<div class="flex items-center gap-2 text-xs font-medium text-indigo-200">' +
+            '<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">' +
+              '<path stroke-linecap="round" stroke-linejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" /></svg>' +
+            'Recomendação inteligente' +
+          '</div>' +
+          '<h2 class="text-xl sm:text-2xl font-semibold mt-1">' + escapeHtml(termo) + '</h2>' +
+        '</div>' +
+
+        '<div class="p-6 space-y-6">' +
+
+          '<div class="rounded-xl bg-indigo-50 border border-indigo-100 px-4 py-3 text-sm text-indigo-900">' +
+            'Essa mancha não está no guia oficial, mas pelas características ela se comporta como ' +
+            '<strong>' + escapeHtml(data.rotulo) + '</strong> (ex.: ' + escapeHtml(data.exemplos) + '). ' +
+            'A recomendação abaixo é uma aproximação com base nesse tipo de sujeira.' +
           '</div>' +
 
           '<div>' +
-            '<div class="grid gap-3 sm:grid-cols-2">' +
-              '<a href="' + googleUrl + '" target="_blank" rel="noopener noreferrer" ' +
-                'class="flex items-center justify-center gap-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 active:bg-emerald-700 px-5 py-4 text-white font-semibold text-base shadow-lg shadow-emerald-500/30 transition">' +
-                cartIcon + 'Buscar Melhor Preço' +
-              '</a>' +
-              '<a href="' + mlUrl + '" target="_blank" rel="noopener noreferrer" ' +
-                'class="flex items-center justify-center gap-2 rounded-xl bg-yellow-400 hover:bg-yellow-500 active:bg-yellow-600 px-5 py-4 text-slate-900 font-semibold text-base shadow-lg shadow-yellow-400/30 transition">' +
-                cartIcon + 'Ver no Mercado Livre' +
-              '</a>' +
-            '</div>' +
-            extraBuyLinks +
-            '<p class="text-center text-xs text-slate-400 mt-3">"Buscar Melhor Preço" compara ofertas no Google Shopping. O outro botão leva direto ao Mercado Livre.</p>' +
+            '<h3 class="text-sm font-semibold text-slate-900 mb-3">Produto(s) que devem ajudar</h3>' +
+            '<ul class="space-y-2">' + productsListHtml(data.produtos) + '</ul>' +
           '</div>' +
+
+          '<div>' +
+            '<h3 class="text-sm font-semibold text-slate-900 mb-3">Primeiros socorros caseiros (antes do produto)</h3>' +
+            '<ol class="space-y-2 text-sm text-slate-600">' + stepsListHtml(data.caseiro) + '</ol>' +
+          '</div>' +
+
+          warningHtml() +
+          buyBlockHtml(data.produtos) +
 
         '</div>' +
       '</article>'
@@ -420,8 +612,14 @@
 
     // Cards de resultado imediatos abaixo da busca
     if (matches.length === 0) {
-      clearResults();
-      $emptyState.classList.remove("hidden");
+      var inferred = inferCategory(q);
+      if (inferred) {
+        $emptyState.classList.add("hidden");
+        renderInferredCard(q, inferred);
+      } else {
+        clearResults();
+        $emptyState.classList.remove("hidden");
+      }
       setCompactMode(true);
     } else if (matches.length === 1) {
       $emptyState.classList.add("hidden");
